@@ -1,0 +1,10 @@
+requests>=2.32,<3
+httpx>=0.28,<1
+beautifulsoup4>=4.12,<5
+psutil>=7,<8
+PyAutoGUI==0.9.54
+Pillow>=10,<13
+pywinauto==0.6.9
+pywin32>=306
+ddgs==9.16.0
+pywebview==6.2.1

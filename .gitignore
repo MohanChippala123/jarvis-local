@@ -1,0 +1,14 @@
+.venv/
+.build-venv/
+data/
+__pycache__/
+*.pyc
+build/
+dist/
+releases/
+*.exe
+*.spec
+.vercel/
+.env*
+!*.example
+website/downloads/
