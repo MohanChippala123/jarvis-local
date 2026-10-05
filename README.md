@@ -2,11 +2,11 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.4.0 · Windows x64 · MIT licensed**
+**Early access · v0.4.1 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.4.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.4.1), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 
@@ -23,6 +23,12 @@ lms load google/gemma-4-e4b --context-length 16384 --yes
 ```
 
 Jarvis accepts only a loopback HTTP server address. The default is `http://127.0.0.1:1234`. It checks LM Studio's local model library and rejects models without the required tool or vision capabilities. LM Link is not used. If you enabled LM Studio server authentication, set the `JARVIS_LM_STUDIO_TOKEN` environment variable before starting Jarvis.
+
+## Automatic actions
+
+Settings & access includes **Auto-approve actions**. When enabled, Jarvis executes enabled desktop, file, PowerShell, and coding tools without approval dialogs, including project edit grants and terminal commands. The activity log records each automatic approval. Commands can change your PC as your Windows user. Stop, file scopes, protected state, backups, capability toggles, and timeouts still apply. Turn the setting off to resume manual review. Fresh installations default to manual approval.
+
+The approval descriptions below describe manual mode; auto-approval skips those dialogs. This setting does not guarantee that the model can complete every task.
 
 ## Coding agent and model selection
 

@@ -43,6 +43,11 @@
       "source": "/downloads/Jarvis-0.3.0-windows-x64.zip",
       "destination": "https://github.com/MohanChippala123/jarvis-local/releases/download/v0.3.0/Jarvis-0.3.0-windows-x64.zip",
       "permanent": true
+    },
+    {
+      "source": "/downloads/Jarvis-0.4.0-windows-x64.zip",
+      "destination": "https://github.com/MohanChippala123/jarvis-local/releases/download/v0.4.0/Jarvis-0.4.0-windows-x64.zip",
+      "permanent": true
     }
   ]
 }

@@ -1,10 +1,10 @@
-# v0.4.0 validation
+# v0.4.1 validation
 
 Validated on Windows on October 4, 2026. This is early-access software, not a claim that every third-party app works.
 
 ## Automated checks
 
-**39 passing tests** cover:
+**43 passing tests** cover:
 
 - File-scope and protected-state restrictions.
 - Declined and cancelled writes producing no file changes.
@@ -16,6 +16,8 @@ Validated on Windows on October 4, 2026. This is early-access software, not a cl
 - Local model capability checks and rejecting unknown models.
 - Assembly of streamed function names and JSON arguments.
 - Cancelling a blocked inference stream without waiting for generation to finish.
+
+Additional automatic-action checks verify an actual file write without a dialog and with its original backup, cancellation, scope/capability enforcement, and switching a waiting action into automatic mode then restoring manual review.
 
 ## Actual desktop tests
 
