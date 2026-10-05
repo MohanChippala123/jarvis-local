@@ -52,7 +52,7 @@ def cancel(job):
         try:loop.call_soon_threadsafe(task.cancel)
         except RuntimeError:pass
 
-def stream_chat(model,messages,tools,job,on_token,url=DEFAULT_URL,max_tokens=1800):
+def stream_chat(model,messages,tools,job,on_token,url=DEFAULT_URL,max_tokens=4096):
     return asyncio.run(_stream_chat(model,messages,tools,job,on_token,local_url(url),max_tokens))
 
 async def _stream_chat(model,messages,tools,job,on_token,url,max_tokens):
@@ -62,7 +62,7 @@ async def _stream_chat(model,messages,tools,job,on_token,url,max_tokens):
         if job['cancel'].is_set():raise InterruptedError('Stopped.')
         payload={'model':model,'messages':messages,'stream':True,'temperature':.2,'max_tokens':max_tokens}
         if tools:payload['tools']=tools
-        content='';calls={}
+        content='';calls={};finish_reason=None;reasoning_chars=0
         async with httpx.AsyncClient(timeout=httpx.Timeout(180,connect=8),trust_env=False) as client:
             async with client.stream('POST',url+'/v1/chat/completions',json=payload,headers=headers()) as response:
                 if response.status_code!=200:
@@ -77,10 +77,13 @@ async def _stream_chat(model,messages,tools,job,on_token,url,max_tokens):
                     if 'error' in part:raise RuntimeError(str(part['error']))
                     choices=part.get('choices',[])
                     if not choices:continue
+                    finish_reason=choices[0].get('finish_reason') or finish_reason
                     delta=choices[0].get('delta',{})
+                    reasoning_chars+=len(delta.get('reasoning_content') or '')
                     chunk=delta.get('content') or ''
                     if chunk:content+=chunk;on_token(chunk)
                     for fragment in delta.get('tool_calls',[]):merge_delta(calls,fragment)
+        job['inference_stats']={'finish_reason':finish_reason,'reasoning_characters':reasoning_chars}
         result={'role':'assistant','content':content}
         if calls:
             result['tool_calls']=[]

@@ -2,11 +2,11 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.2.0 · Windows x64 · MIT licensed**
+**Early access · v0.3.0 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.2.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.3.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 
@@ -23,6 +23,10 @@ lms load google/gemma-4-e4b --context-length 16384 --yes
 ```
 
 Jarvis accepts only a loopback HTTP server address. The default is `http://127.0.0.1:1234`. It checks LM Studio's local model library and rejects models without the required tool or vision capabilities. LM Link is not used. If you enabled LM Studio server authentication, set the `JARVIS_LM_STUDIO_TOKEN` environment variable before starting Jarvis.
+
+## v0.3.0 improvements
+
+Natural action requests now start with tools rather than unnecessary clarification. Chrome/Edge launch by name, browser URLs open through an explicit approved tool, web search falls back between providers, and recent tool observations stay in conversation context. Empty or unfinished local-model replies get a bounded recovery attempt.
 
 ## Features
 

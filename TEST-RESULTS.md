@@ -1,10 +1,10 @@
-# v0.2.0 validation
+# v0.3.0 validation
 
 Validated on Windows on October 4, 2026. This is early-access software, not a claim that every third-party app works.
 
 ## Automated checks
 
-**17 passing tests** cover:
+**25 passing tests** cover:
 
 - File-scope and protected-state restrictions.
 - Declined and cancelled writes producing no file changes.
@@ -40,6 +40,10 @@ The tests exposed and resolved Windows DPI-coordinate mismatches and wheel-event
 - The standalone Windows executable opened its app window and passed local chat plus system-information tool execution.
 - The standalone Windows executable also completed the approved mouse-and-keyboard workflow against the scratch window.
 - No cloud model or LM Link was used.
+
+## Natural request regression
+
+The screenshot request, “control my screen, then open google chrome, then open reddit, then find new ai integrated project ideas,” completed against real Chrome and LM Studio, with the preceding failed clarification messages included in context. The model opened public browser pages, searched Reddit, and returned project findings with actual source links. Tests also cover provider fallback, browser capability checks, conversational tool evidence, and bounded completion repair.
 
 ## Limits
 
