@@ -63,6 +63,14 @@ class CodingTests(unittest.TestCase):
         with patch.object(app,'approve',side_effect=PermissionError('Declined')),patch.object(app,'launch_project_command') as launch:
             with self.assertRaises(PermissionError):self.execute('run_project_command',{'command':'echo no'})
             launch.assert_not_called()
+    def test_committed_edit_event_and_no_event_after_rejected_edit(self):
+        self.execute('write_project_file',{'path':'main.py','content':'old\n'})
+        self.execute('edit_project_file',{'path':'main.py','old_text':'old','new_text':'new'})
+        changes=[e for e in self.job['events'] if e['type']=='file_changed']
+        self.assertEqual(changes[-1]['content'],(self.project/'main.py').read_text())
+        self.assertEqual(changes[-1]['path'],'main.py');self.assertIn('-old',changes[-1]['diff'])
+        with self.assertRaises(ValueError):self.execute('edit_project_file',{'path':'main.py','old_text':'missing','new_text':'no'})
+        self.assertEqual(len([e for e in self.job['events'] if e['type']=='file_changed']),2)
     def test_coding_disabled_and_files_disabled_hide_tools(self):
         for toggle in ('coding','files'):
             config={**self.config,toggle:False}

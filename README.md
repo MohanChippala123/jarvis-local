@@ -2,11 +2,11 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.4.1 · Windows x64 · MIT licensed**
+**Early access · v0.5.0 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.4.1), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.5.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 
@@ -23,6 +23,12 @@ lms load google/gemma-4-e4b --context-length 16384 --yes
 ```
 
 Jarvis accepts only a loopback HTTP server address. The default is `http://127.0.0.1:1234`. It checks LM Studio's local model library and rejects models without the required tool or vision capabilities. LM Link is not used. If you enabled LM Studio server authentication, set the `JARVIS_LM_STUDIO_TOKEN` environment variable before starting Jarvis.
+
+## Live coding workspace
+
+The **Live workspace** above the conversation opens automatically for coding tasks and command execution. File changes appear only after a successful save. Choose a changed file and switch between a red/green diff and saved source. The terminal shows the exact PowerShell command, working folder, stdout/stderr as the process writes them, and final exit code, Stop or timeout status. Preview logs continue while their server runs. This is an output viewer, not an interactive terminal.
+
+The current task’s view remains available until the next task; refreshing during an active task replays its events. Events are also stored in the local activity log. Large file/diff views and console output are bounded and indicate clipping; the command’s final result retains its output tail. Terminal output depends on the subprocess flushing its buffers.
 
 ## Automatic actions
 

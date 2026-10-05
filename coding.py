@@ -1,5 +1,6 @@
 """Project-scoped coding tools. Commands run as the user, not in a sandbox."""
 import json,os,shutil,hashlib,secrets,subprocess,time,socket
+import live
 from pathlib import Path
 
 SKIP={'.git','node_modules','.venv','venv','__pycache__','.next','dist','build','.idea'}
@@ -131,10 +132,15 @@ def execute(name,args,job,config,hooks):
         edit_grant(base,job,hooks)
         p=project_path(base,args['path'],hooks)
         if name=='create_project_folder':p.mkdir(parents=True,exist_ok=True);return {'created':str(p)}
-        if name=='write_project_file':return write(p,args['content'],hooks)
-        text=p.read_text(encoding='utf-8-sig');old=args['old_text']
-        if not old or text.count(old)!=1:raise ValueError('old_text must match exactly once. Read the current file and include enough surrounding context.')
-        return write(p,text.replace(old,args['new_text'],1),hooks)
+        text=p.read_text(encoding='utf-8-sig') if p.exists() else ''
+        if name=='write_project_file':content=args['content']
+        else:
+            old=args['old_text']
+            if not old or text.count(old)!=1:raise ValueError('old_text must match exactly once. Read the current file and include enough surrounding context.')
+            content=text.replace(old,args['new_text'],1)
+        result=write(p,content,hooks)
+        if hooks.get('event'):live.file_change(p.relative_to(base),text,content,lambda kind,**fields:hooks['event'](job,kind,**fields))
+        return result
     if name in ('run_project_command','start_project_preview'):
         if not base.is_dir():raise ValueError('Create the project folder before running commands.')
         if job.get('project_commands_declined'):raise PermissionError('Terminal commands were declined for this task.')
@@ -159,6 +165,7 @@ def execute(name,args,job,config,hooks):
         stop_preview(str(base),hooks)
         logpath=hooks['data']/('preview-'+secrets.token_hex(8)+'.log');log=logpath.open('w',encoding='utf-8')
         process=hooks['launch'](command,base,log)
+        if hooks.get('event'):live.preview(process,command,base,logpath,lambda kind,**fields:hooks['event'](job,kind,**fields))
         PREVIEWS[str(base)]={'process':process,'url':args['url'],'command':command,'log':log}
         job['process']=process
         deadline=time.monotonic()+40

@@ -26,6 +26,7 @@ import requests
 from bs4 import BeautifulSoup
 import lmstudio
 import coding
+import live
 
 BASE = Path(__file__).resolve().parent
 DATA = (Path(os.environ.get('LOCALAPPDATA',str(Path.home()))) / 'JarvisLocal') if getattr(sys,'frozen',False) else BASE / 'data'
@@ -221,6 +222,7 @@ def approve(job, name, args):
     raise PermissionError('Approval expired. No action taken.')
 
 def ps(script, timeout=25, job=None):
+    original_script=script
     script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8\n$ErrorActionPreference = 'Stop'\n$ProgressPreference = 'SilentlyContinue'\n" + script
     encoded = base64.b64encode(script.encode('utf-16le')).decode()
     process = subprocess.Popen(['powershell.exe','-NoProfile','-NonInteractive','-OutputFormat','Text','-EncodedCommand', encoded],
@@ -228,6 +230,11 @@ def ps(script, timeout=25, job=None):
     if job is not None:
         job['process'] = process
     try:
+        if job is not None:
+            result=live.command(process,original_script,Path.cwd(),timeout,job,lambda kind,**fields:event(job,kind,**fields),terminate_tree)
+            if result.get('timed_out'):raise RuntimeError('Command timed out and its process tree was stopped.')
+            if result['exit_code']:raise RuntimeError(result['stderr'][:4000] or result['stdout'][:4000])
+            return result['stdout']
         out, err = process.communicate(timeout=timeout)
         if process.returncode:
             raise RuntimeError(err.decode('utf-8', errors='replace')[:4000])
@@ -470,25 +477,19 @@ def _execute(name, args, job, config):
 def launch_project_command(command,cwd,output=None):
     script="[Console]::OutputEncoding=[Text.Encoding]::UTF8\n$ErrorActionPreference='Stop'\n$ProgressPreference='SilentlyContinue'\n"+command+"\nif ($null -ne $LASTEXITCODE) { exit $LASTEXITCODE }"
     encoded=base64.b64encode(script.encode('utf-16le')).decode()
-    return subprocess.Popen(['powershell.exe','-NoProfile','-NonInteractive','-EncodedCommand',encoded],cwd=str(cwd),stdout=output if output else subprocess.PIPE,stderr=subprocess.STDOUT if output else subprocess.PIPE,creationflags=subprocess.CREATE_NO_WINDOW)
+    return subprocess.Popen(['powershell.exe','-NoProfile','-NonInteractive','-EncodedCommand',encoded],cwd=str(cwd),env={**os.environ,'PYTHONUNBUFFERED':'1','PYTHONIOENCODING':'utf-8'},stdout=output if output else subprocess.PIPE,stderr=subprocess.STDOUT if output else subprocess.PIPE,creationflags=subprocess.CREATE_NO_WINDOW)
 
 def run_project_command(command,cwd,timeout,job):
     process=launch_project_command(command,cwd);job['process']=process
     try:
-        try:out,err=process.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            terminate_tree(process);out,err=process.communicate()
-            if job['cancel'].is_set():raise InterruptedError('Stopped by you.')
-            return {'exit_code':process.returncode,'timed_out':True,'stdout':out.decode('utf-8',errors='replace')[-12000:],'stderr':err.decode('utf-8',errors='replace')[-12000:]}
-        if job['cancel'].is_set():raise InterruptedError('Stopped by you.')
-        return {'exit_code':process.returncode,'stdout':out.decode('utf-8',errors='replace')[-12000:],'stderr':err.decode('utf-8',errors='replace')[-12000:]}
+        return live.command(process,command,cwd,timeout,job,lambda kind,**fields:event(job,kind,**fields),terminate_tree)
     finally:job['process']=None
 
 def coding_hooks():
     def permissions():
         with LOCK:
             if not CONFIG.get('coding') or not CONFIG.get('files'):raise PermissionError('Coding or file access was disabled.')
-    return {'allowed':lambda p:path_allowed(p,dict(CONFIG)),'approve':approve,'data':DATA,'permissions':permissions,'command':run_project_command,'launch':launch_project_command,'terminate':terminate_tree}
+    return {'allowed':lambda p:path_allowed(p,dict(CONFIG)),'approve':approve,'data':DATA,'permissions':permissions,'command':run_project_command,'launch':launch_project_command,'terminate':terminate_tree,'event':event}
 
 def coding_prompt(config):
     return f'''You are Jarvis, a local coding agent. Use project tools to build and fix the requested software, not just explain code.

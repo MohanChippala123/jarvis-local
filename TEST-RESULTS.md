@@ -1,10 +1,10 @@
-# v0.4.1 validation
+# v0.5.0 validation
 
 Validated on Windows on October 4, 2026. This is early-access software, not a claim that every third-party app works.
 
 ## Automated checks
 
-**43 passing tests** cover:
+**48 passing tests** cover:
 
 - File-scope and protected-state restrictions.
 - Declined and cancelled writes producing no file changes.
@@ -18,6 +18,10 @@ Validated on Windows on October 4, 2026. This is early-access software, not a cl
 - Cancelling a blocked inference stream without waiting for generation to finish.
 
 Additional automatic-action checks verify an actual file write without a dialog and with its original backup, cancellation, scope/capability enforcement, and switching a waiting action into automatic mode then restoring manual review.
+
+Live-view checks verify output arrives before process exit, separate stdout/stderr and nonzero status, split UTF-8 decoding, large-output bounds without pipe deadlock, timeout/Stop end states, exact saved-file diffs, and no edit event after a failed edit.
+
+The packaged executable's real LM Studio bug-fix task emitted the saved calculator diff, streamed terminal output, and matching exit codes **1 → 0**. Browser checks verified both diff and saved-source views. A real local preview served the project, streamed its log, and emitted its terminal end state when stopped.
 
 ## Actual desktop tests
 
