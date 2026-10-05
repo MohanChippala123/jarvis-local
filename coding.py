@@ -6,14 +6,14 @@ from pathlib import Path
 SKIP={'.git','node_modules','.venv','venv','__pycache__','.next','dist','build','.idea'}
 PREVIEWS={}
 
-def compact_messages(messages,budget=30000):
+def compact_messages(messages,budget=30000,recent_limit=8000):
     """Keep complete function/result pairs while bounding local-model context."""
     result=json.loads(json.dumps(messages))
     tool_indices=[i for i,m in enumerate(result) if m['role']=='tool']
     recent=set(tool_indices[-2:])
     for i,m in enumerate(result):
         if m['role']=='tool':
-            limit=8000 if i in recent else 1200
+            limit=recent_limit if i in recent else 1200
             if len(m['content'])>limit:m['content']=m['content'][:limit]+'\n[Older observation clipped; read the file again for exact content.]'
         for call in m.get('tool_calls',[]):
             try:args=json.loads(call['function']['arguments'])

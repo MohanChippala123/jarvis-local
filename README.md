@@ -2,11 +2,11 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.5.1 · Windows x64 · MIT licensed**
+**Early access · v0.6.0 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.5.1), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.6.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 
@@ -129,3 +129,13 @@ Build on Windows with `build_windows.py`. It uses PyInstaller and bundles only a
 Jarvis app source is MIT licensed. Runtime dependencies retain their own licenses; see the bundled THIRD-PARTY-NOTICES file and package metadata. Model weights are not distributed and have their own licenses. Jarvis is not affiliated with Marvel, LM Studio, or model publishers.
 
 References: [LM Studio tool use](https://lmstudio.ai/docs/developer/openai-compat/tools), [local model API](https://lmstudio.ai/docs/developer/rest/list), [PyAutoGUI](https://pyautogui.readthedocs.io/en/latest/quickstart.html), [DDGS](https://github.com/deedy5/ddgs).
+
+## Screen control mode
+
+Choose **Mode → Screen control** above the chat, then describe what to do in an app. The agent reads Windows accessibility controls first, targets fresh control IDs instead of guessed coordinates, and automatically observes again after each action. Local screenshot vision remains available for controls that Windows cannot expose.
+
+The **Screen control** panel shows the latest real capture, target window, control count and inspection time. It updates after tool actions; it is not a continuous video stream. Focused windows are cropped for readability; unfocused observations show the desktop. **Stop task** interrupts the agent and model inference, including vision. You can set a separate screen task step limit in Settings.
+
+Mouse input uses Windows virtual-desktop coordinates, including secondary monitors with negative positions. Foreground and target-window checks still apply. Control IDs expire after one action or 45 seconds, and stale controls require a new observation. The mode exposes desktop and enabled web tools; coding and arbitrary shell tools stay in their respective modes.
+
+In a packaged Gemma 4 E4B test, the agent inspected a real Windows form, typed the requested text, clicked its button and verified the result in **12.7 seconds**. Warm accessibility observations took **36–40 ms**, excluding screenshots and local-model decision time. Your app, hardware and chosen model affect performance.

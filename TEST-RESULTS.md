@@ -1,3 +1,17 @@
+# v0.6.0 screen-control validation
+
+October 5, 2026. **72 automated tests passed** and JavaScript syntax validation passed.
+
+- Dedicated screen mode and a separate screen-step limit; file/shell/coding mutations are absent from its tool catalog.
+- Fresh accessibility IDs; stale, expired, disabled, password and wrong-window targets are rejected. COM wrappers are re-resolved at input time rather than retained across tool calls.
+- Cancel and denied-action checks execute before input. Local vision uses the same cancellable inference stream as chat.
+- Fast native window inventory, reduced pointer delays, virtual-desktop coordinates and all-monitor capture. A foreground target is cropped for a readable live view.
+- Latest accessibility observations survive context compaction. Active screen task events replay after a UI reload.
+- Real packaged Gemma 4 E4B agent: list_windows → inspect_window → type → click → verified Result label. Two successful runs, **12.6–12.7 seconds** overall (four calls in the first, six in the repeat with stale-ID recovery); warm inspections **36–42 ms**, type **167–174 ms**, click **137–139 ms** (input timings exclude screenshot/model inference). The test window was on a monitor with negative Y coordinates.
+- Browser QA: Screen control selectable and task controls disabled while running; screen image, target, control count and timings appeared; no browser console errors.
+
+These are measured test results, not a guarantee that every third-party app or model behaves correctly. Screens are snapshots after observations/actions, not video. Historical tests and limitations follow.
+
 # v0.5.1 validation
 
 Validated on Windows on October 4, 2026. This is early-access software, not a claim that every third-party app works.
