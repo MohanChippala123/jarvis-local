@@ -116,13 +116,13 @@ async def _stream_chat(model,messages,tools,job,on_token,url,max_tokens):
     finally:
         job['inference_loop']=None;job['inference_task']=None
 
-def describe_image(model,png_b64,question,url=DEFAULT_URL,job=None):
+def describe_image(model,png_b64,question,url=DEFAULT_URL,job=None,image_mime='image/png',max_tokens=600):
     validate_model(model,'vision',url)
     messages=[{'role':'user','content':[{'type':'text','text':question},
-        {'type':'image_url','image_url':{'url':'data:image/png;base64,'+png_b64}}]}]
+        {'type':'image_url','image_url':{'url':'data:'+image_mime+';base64,'+png_b64}}]}]
     if job is None:
         import threading
         job={'cancel':threading.Event()}
     # Share the cancellable HTTP stream so Stop also interrupts vision inference.
-    result=stream_chat(model,messages,[],job,lambda chunk:None,url,max_tokens=600)
+    result=stream_chat(model,messages,[],job,lambda chunk:None,url,max_tokens=max_tokens)
     return result.get('content') or 'The vision model returned no description.'

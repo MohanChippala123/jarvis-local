@@ -94,6 +94,17 @@ class HttpTests(unittest.TestCase):
     def test_html_has_session_token(self):
         r=requests.get(self.url);self.assertEqual(r.status_code,200)
         self.assertIn(app.TOKEN,r.text);self.assertNotIn('__TOKEN__',r.text)
+    def test_image_retrieval_is_private_and_normalized(self):
+        from test_attachments import sample
+        import attachments
+        with tempfile.TemporaryDirectory() as folder,patch.object(app,'DATA',Path(folder)):
+            image=attachments.save(attachments.decode([sample()]),folder)[0]
+            url=self.url+'/api/image/'+image['id']
+            self.assertEqual(requests.get(url).status_code,403)
+            response=requests.get(url,headers={'X-Jarvis-Token':app.TOKEN})
+            self.assertEqual(response.status_code,200);self.assertEqual(response.headers['Content-Type'],'image/jpeg')
+            self.assertTrue(response.content.startswith(b'\xff\xd8'));self.assertIn('blob:',requests.get(self.url).headers['Content-Security-Policy'])
+            self.assertEqual(requests.get(self.url+'/api/image/not-an-id',headers={'X-Jarvis-Token':app.TOKEN}).status_code,400)
     def test_incremental_job_poll_returns_only_new_events(self):
         identifier='audit-http';app.JOBS[identifier]={'events':[{'type':'status','text':'first'},{'type':'status','text':'second'}],'done':True,'approval':None}
         try:

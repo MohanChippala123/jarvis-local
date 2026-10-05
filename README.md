@@ -2,11 +2,11 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.6.0 · Windows x64 · MIT licensed**
+**Early access · v0.7.0 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.6.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.7.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 
@@ -129,6 +129,14 @@ Build on Windows with `build_windows.py`. It uses PyInstaller and bundles only a
 Jarvis app source is MIT licensed. Runtime dependencies retain their own licenses; see the bundled THIRD-PARTY-NOTICES file and package metadata. Model weights are not distributed and have their own licenses. Jarvis is not affiliated with Marvel, LM Studio, or model publishers.
 
 References: [LM Studio tool use](https://lmstudio.ai/docs/developer/openai-compat/tools), [local model API](https://lmstudio.ai/docs/developer/rest/list), [PyAutoGUI](https://pyautogui.readthedocs.io/en/latest/quickstart.html), [DDGS](https://github.com/deedy5/ddgs).
+
+## Image prompts
+
+Click **+** beside the microphone to attach images, paste an image into the prompt box, or drag files onto the composer. Preview attachments and use the remove button before sending. You can send up to **3 images**, including an image-only message. PNG, JPEG, WebP and GIF are supported; GIFs use the first frame. The picker accepts files up to 10 MB and 20 megapixels, and resizes them to 1600 pixels on the longest edge before upload.
+
+Choose the local vision model in **Settings > Images & screenshot understanding**. Jarvis reads each image locally with that model, then provides its observations to your chosen chat/coding/screen agent. A text-only chat model can therefore use image context. Image interpretation can miss fine details; crop or send a clearer image when necessary. Stop interrupts image inference too.
+
+Images are normalized to JPEG without original EXIF metadata and saved in the local Jarvis data folder. Chat history retains attachment previews and the vision observations for follow-up questions. Image retrieval requires the current app token; image data is not embedded in history JSON. New conversation clears the conversation; stored images remain in the local data folder.
 
 ## Screen control mode
 

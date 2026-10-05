@@ -1,3 +1,15 @@
+# v0.7.0 image-prompt validation
+
+October 5, 2026. **81 automated tests passed**, plus JavaScript syntax validation.
+
+- Image count/size/type validation, malformed data rejection, normalized JPEG encoding, transparency flattening, aspect ratio and path safety.
+- Agent integration: local vision observations reach the chosen agent and persist as context; cancellation prevents image inference.
+- Attachment retrieval requires authentication, serves JPEG with no-store headers, and rejects invalid IDs. Browser CSP permits the private blob previews.
+- Real packaged UI: picker attachment, preview removal, reattachment and prompt submission passed. Local Gemma 4 E4B correctly read **IMAGE TEST 47** and identified the **red square** in the uploaded image.
+- Reloaded app restored the stored 700x460 image as an authenticated blob preview. Browser console had no errors.
+
+Paste/drop handlers are implemented using browser image/file events. The recorded browser interaction used the picker. Previous validations follow.
+
 # v0.6.0 screen-control validation
 
 October 5, 2026. **72 automated tests passed** and JavaScript syntax validation passed.
