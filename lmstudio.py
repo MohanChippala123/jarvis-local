@@ -38,6 +38,12 @@ def validate_model(model,capability,url=DEFAULT_URL):
         raise ValueError(f'{model} does not support {capability}. Choose a compatible local model in Settings.')
     return match
 
+def load_model(model,url=DEFAULT_URL):
+    match=validate_model(model,'tools',url)
+    if match.get('loaded_instances'):return {'status':'loaded','model':match['key']}
+    r=requests.post(local_url(url)+'/api/v1/models/load',headers=headers(),json={'model':match['key'],'context_length':16384},timeout=(8,180))
+    r.raise_for_status();return r.json()
+
 def merge_delta(calls,fragment):
     idx=fragment.get('index',0)
     current=calls.setdefault(idx,{'id':'','type':'function','function':{'name':'','arguments':''}})

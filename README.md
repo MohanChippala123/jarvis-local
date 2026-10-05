@@ -2,18 +2,18 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.3.0 · Windows x64 · MIT licensed**
+**Early access · v0.4.0 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.3.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.4.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 
 1. Install [LM Studio](https://lmstudio.ai/download).
 2. Download a model trained for tools. **google/gemma-4-e4b** is the default and supports both tools and vision. Choose a quantization that fits your machine.
 3. Load your model and start LM Studio's local server on port **1234** in its Developer tab.
-4. Open Jarvis, select your chat and screenshot models in Settings, and try a small task.
+4. Open Jarvis, choose your chat model above the conversation and your screenshot model in Settings, and try a small task.
 
 For CLI users:
 
@@ -24,9 +24,17 @@ lms load google/gemma-4-e4b --context-length 16384 --yes
 
 Jarvis accepts only a loopback HTTP server address. The default is `http://127.0.0.1:1234`. It checks LM Studio's local model library and rejects models without the required tool or vision capabilities. LM Link is not used. If you enabled LM Studio server authentication, set the `JARVIS_LM_STUDIO_TOKEN` environment variable before starting Jarvis.
 
-## v0.3.0 improvements
+## Coding agent and model selection
 
-Natural action requests now start with tools rather than unnecessary clarification. Chrome/Edge launch by name, browser URLs open through an explicit approved tool, web search falls back between providers, and recent tool observations stay in conversation context. Empty or unfinished local-model replies get a bounded recovery attempt.
+Choose **Coding agent** above the conversation, enter an absolute **Project folder** (existing or new), and describe what to build or fix. Jarvis inspects the project, reads/searches source files, creates directories, writes complete files or exact edits, runs commands, diagnoses failures, and continues toward passing builds/tests. Each coding task has a bounded step budget (30 by default; configurable up to 60).
+
+Approve project edits once per task. This permits directory creation and file edits only inside the selected project; existing files are backed up. Terminal build/test/install/preview commands ask for separate approval and display their exact working directory. They run as your Windows user, **not in a security sandbox**, and are independent of the general PowerShell toggle. Turning off Coding agent or Files blocks subsequent coding actions. Private environment/key files and Git internals are excluded from project file tools.
+
+Python and Node.js must be installed separately when your project uses them; the Python bundled in Jarvis.exe is for Jarvis itself. The agent reports installed runtimes. A managed local web preview can be started by the agent and opened/stopped from the project controls; preview servers stop when Jarvis closes. Commands time out after at most three minutes, so very long installs may need manual execution.
+
+Use the **LM Studio model** dropdown directly above the chat. It lists downloaded models with tool support and marks loaded models. **Refresh** updates the list; **Load model** loads the selected model into LM Studio. Selection persists and applies to the next task. Screenshot models are selected separately in Settings, filtered for vision support. Model size and quality still matter; choose a model that fits your RAM/VRAM. Models must be downloaded through LM Studio first.
+
+Example: “Run the tests, fix the failing code without changing tests, and rerun until they pass.” Or: “Build a todo app in this project, verify it, and start a local preview.”
 
 ## Features
 

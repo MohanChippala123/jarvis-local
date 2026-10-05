@@ -1,10 +1,10 @@
-# v0.3.0 validation
+# v0.4.0 validation
 
 Validated on Windows on October 4, 2026. This is early-access software, not a claim that every third-party app works.
 
 ## Automated checks
 
-**25 passing tests** cover:
+**39 passing tests** cover:
 
 - File-scope and protected-state restrictions.
 - Declined and cancelled writes producing no file changes.
@@ -44,6 +44,13 @@ The tests exposed and resolved Windows DPI-coordinate mismatches and wheel-event
 ## Natural request regression
 
 The screenshot request, “control my screen, then open google chrome, then open reddit, then find new ai integrated project ideas,” completed against real Chrome and LM Studio, with the preceding failed clarification messages included in context. The model opened public browser pages, searched Reddit, and returned project findings with actual source links. Tests also cover provider fallback, browser capability checks, conversational tool evidence, and bounded completion repair.
+
+## Coding agent validation
+
+- A real local LM Studio coding agent ran three failing calculator tests, inspected source, fixed subtraction to addition, and reran the same unchanged tests successfully. Recorded command exit codes: **1 → 0**.
+- The packaged Windows executable independently repeated the failing-test, source-edit, passing-test workflow through its authenticated HTTP API; all three tests remained unchanged.
+- A local preview server served the selected project and stopped its own process tree successfully.
+- Automated checks cover project path escapes, private/Git files, one edit grant per task, recoverable edits, ambiguous replacements, denied commands, permission revocation, source search line numbers, observable command failures, context compaction with paired function results, and LM Studio model loading.
 
 ## Limits
 
