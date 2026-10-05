@@ -2,11 +2,11 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.5.0 · Windows x64 · MIT licensed**
+**Early access · v0.5.1 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.5.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.5.1), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 

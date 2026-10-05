@@ -1,10 +1,27 @@
-# v0.5.0 validation
+# v0.5.1 validation
 
 Validated on Windows on October 4, 2026. This is early-access software, not a claim that every third-party app works.
 
+## October 5 audit fixes
+
+- Malformed or non-object model tool arguments now return a tool error so the agent can recover, rather than ending the whole task. Context compaction tolerates these calls.
+- Coding tasks check for actual source edits and command execution instead of accepting promises after read-only tools. Project instructions now require preserving real integrations and working functionality.
+- General PowerShell execution propagates a native program's nonzero exit code and displays it in the terminal.
+- General file writes are atomic and retain backups, protecting original contents if replacement fails.
+- Browser launch rechecks internet access after approval; missing project edit targets and oversized text edits are rejected before saving.
+- Terminal Stop/timeouts have bounded output-drain time, including when a subprocess leaves pipes open.
+- Live task polling returns only new events instead of repeatedly transferring all tokens, screenshots and output.
+- Rapid submissions are guarded while a task request is pending. Model loading excludes concurrent tasks and releases the lock on failure.
+- Unsaved settings survive refreshes; model/config controls are disabled during a task. Missing/unauthorized jobs no longer poll forever.
+- New conversation resets live workspace/activity; replay removes the stale empty-file option; clearing the terminal resets its stream labels.
+- Stale successful coding history is labeled as previous context. Action requests require fresh tool execution, with a fallback when a model/backend does not return a required tool call. Offline and model-load errors now offer actionable messages. Preview-state reads tolerate concurrent changes.
+- Approval hints reflect the enabled automatic/manual policy instead of contradicting auto-approval.
+
+Validation: **60 automated tests passed**, including recovery after a malformed tool call with a real file write, atomic-replace failure, native command exit 7, browser permission revocation, incremental HTTP events, and model-load lock release. The packaged local-model workflow was repeated against deliberately broken source with stale successful history present: actual test exit codes were 1 then 0, and tests were unchanged. UI checks verified unsaved settings survive Refresh and stale file placeholders are removed. Prior desktop validations below were recorded on October 4.
+
 ## Automated checks
 
-**48 passing tests** cover:
+**60 passing tests** cover:
 
 - File-scope and protected-state restrictions.
 - Declined and cancelled writes producing no file changes.

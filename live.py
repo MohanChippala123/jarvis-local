@@ -22,11 +22,13 @@ def command(process,script,cwd,timeout,job,emit,terminate):
             pipe.close();chunks.put((stream,None))
     for stream in ('stdout','stderr'):threading.Thread(target=reader,args=(getattr(process,stream),stream),daemon=True).start()
     ends=0;captured={'stdout':'','stderr':''};shown=0;clipped=False;timed_out=False;stopped=False
-    deadline=time.monotonic()+timeout
+    deadline=time.monotonic()+timeout;drain_deadline=None
     while ends<2 or process.poll() is None:
         if not (timed_out or stopped):
             stopped=job['cancel'].is_set();timed_out=not stopped and time.monotonic()>=deadline
-            if stopped or timed_out:terminate(process)
+            if stopped or timed_out:
+                terminate(process);drain_deadline=time.monotonic()+2
+        if drain_deadline is not None and time.monotonic()>=drain_deadline:break
         try:stream,text=chunks.get(timeout=.05)
         except queue.Empty:continue
         if text is None:ends+=1;continue

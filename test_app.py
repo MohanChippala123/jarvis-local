@@ -94,5 +94,18 @@ class HttpTests(unittest.TestCase):
     def test_html_has_session_token(self):
         r=requests.get(self.url);self.assertEqual(r.status_code,200)
         self.assertIn(app.TOKEN,r.text);self.assertNotIn('__TOKEN__',r.text)
+    def test_incremental_job_poll_returns_only_new_events(self):
+        identifier='audit-http';app.JOBS[identifier]={'events':[{'type':'status','text':'first'},{'type':'status','text':'second'}],'done':True,'approval':None}
+        try:
+            r=requests.get(self.url+'/api/job/'+identifier+'?after=1',headers={'X-Jarvis-Token':app.TOKEN})
+            self.assertEqual(r.status_code,200);self.assertEqual(r.json()['event_count'],2)
+            self.assertEqual(r.json()['events'],[{'type':'status','text':'second'}])
+        finally:app.JOBS.pop(identifier,None)
+    def test_model_loading_holds_task_lock_and_releases_it_after_failure(self):
+        def fail(*args):
+            self.assertTrue(app.BUSY.locked());raise ValueError('Failed to load model')
+        with patch.object(app.lmstudio,'load_model',side_effect=fail):
+            r=requests.post(self.url+'/api/load-model',json={'model':'local'},headers={'X-Jarvis-Token':app.TOKEN})
+        self.assertEqual(r.status_code,400);self.assertFalse(app.BUSY.locked())
 
 if __name__=='__main__':unittest.main()

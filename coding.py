@@ -16,7 +16,9 @@ def compact_messages(messages,budget=30000):
             limit=8000 if i in recent else 1200
             if len(m['content'])>limit:m['content']=m['content'][:limit]+'\n[Older observation clipped; read the file again for exact content.]'
         for call in m.get('tool_calls',[]):
-            args=json.loads(call['function']['arguments'])
+            try:args=json.loads(call['function']['arguments'])
+            except (ValueError,TypeError):continue
+            if not isinstance(args,dict):continue
             for key in ('content','old_text','new_text'):
                 if isinstance(args.get(key),str) and len(args[key])>1000:args[key]='[Completed edit contents omitted from history; read the project file for current code.]'
             call['function']['arguments']=json.dumps(args)
@@ -81,7 +83,7 @@ def write(path,content,hooks):
     return {'written':str(path),'backup':str(backup) if backup else None,'sha256':hashlib.sha256(content.encode()).hexdigest()}
 
 def preview_state():
-    return [{'project':p,'url':v['url'],'command':v['command']} for p,v in PREVIEWS.items() if v['process'].poll() is None]
+    return [{'project':p,'url':v['url'],'command':v['command']} for p,v in list(PREVIEWS.items()) if v['process'].poll() is None]
 
 def stop_preview(project,hooks):
     item=PREVIEWS.pop(project,None)
@@ -132,6 +134,8 @@ def execute(name,args,job,config,hooks):
         edit_grant(base,job,hooks)
         p=project_path(base,args['path'],hooks)
         if name=='create_project_folder':p.mkdir(parents=True,exist_ok=True);return {'created':str(p)}
+        if p.exists() and p.stat().st_size>2000000:raise ValueError('File is too large for a project text edit.')
+        if name=='edit_project_file' and not p.is_file():raise FileNotFoundError('Read an existing project file before editing it.')
         text=p.read_text(encoding='utf-8-sig') if p.exists() else ''
         if name=='write_project_file':content=args['content']
         else:

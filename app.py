@@ -223,7 +223,7 @@ def approve(job, name, args):
 
 def ps(script, timeout=25, job=None):
     original_script=script
-    script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8\n$ErrorActionPreference = 'Stop'\n$ProgressPreference = 'SilentlyContinue'\n" + script
+    script = "[Console]::OutputEncoding = [Text.Encoding]::UTF8\n$ErrorActionPreference = 'Stop'\n$ProgressPreference = 'SilentlyContinue'\n" + script + "\nif ($null -ne $LASTEXITCODE) { exit $LASTEXITCODE }"
     encoded = base64.b64encode(script.encode('utf-16le')).decode()
     process = subprocess.Popen(['powershell.exe','-NoProfile','-NonInteractive','-OutputFormat','Text','-EncodedCommand', encoded],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
@@ -233,7 +233,7 @@ def ps(script, timeout=25, job=None):
         if job is not None:
             result=live.command(process,original_script,Path.cwd(),timeout,job,lambda kind,**fields:event(job,kind,**fields),terminate_tree)
             if result.get('timed_out'):raise RuntimeError('Command timed out and its process tree was stopped.')
-            if result['exit_code']:raise RuntimeError(result['stderr'][:4000] or result['stdout'][:4000])
+            if result['exit_code']:raise RuntimeError('Command exited with code '+str(result['exit_code'])+': '+(result['stderr'][:4000] or result['stdout'][:4000]))
             return result['stdout']
         out, err = process.communicate(timeout=timeout)
         if process.returncode:
@@ -283,6 +283,7 @@ def _execute(name, args, job, config):
         group = GROUP.get(name)
         if group and not CONFIG.get(group):
             raise PermissionError('Capability was disabled in settings.')
+        if name=='browser_open' and not CONFIG.get('internet'):raise PermissionError('Internet access was disabled.')
         current = dict(CONFIG)
     if job['cancel'].is_set(): raise InterruptedError('Stopped.')
     if name in MUTATIONS:
@@ -290,6 +291,7 @@ def _execute(name, args, job, config):
     if job['cancel'].is_set(): raise InterruptedError('Stopped.')
     with LOCK:
         if group and not CONFIG.get(group): raise PermissionError('Capability was disabled.')
+        if name=='browser_open' and not CONFIG.get('internet'):raise PermissionError('Internet access was disabled.')
         current = dict(CONFIG)
     if name == 'system_info':
         return {'time': dt.datetime.now().astimezone().isoformat(), 'home': str(Path.home()),
@@ -322,15 +324,7 @@ def _execute(name, args, job, config):
             with p.open('r', encoding='utf-8-sig') as f: content = f.read(30001)
             return {'path':str(p),'text':content[:30000],'truncated':len(content)>30000}
         if name == 'write_file':
-            if len(args['content']) > 200000: raise ValueError('File too large.')
-            backup = None
-            if p.exists():
-                backup = DATA / 'backups' / (secrets.token_hex(8)+'-'+p.name)
-                backup.parent.mkdir(exist_ok=True)
-                shutil.copy2(p, backup)
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(args['content'],encoding='utf-8')
-            return {'written':str(p),'backup':str(backup) if backup else None}
+            return coding.write(p,args['content'],{'data':DATA})
         if name == 'recycle_file':
             if DATA.is_relative_to(p): raise ValueError('Cannot recycle a folder containing Jarvis state.')
             if p in [Path(r).resolve() for r in current['roots']]: raise ValueError('Cannot recycle an allowed root.')
@@ -496,9 +490,11 @@ def coding_prompt(config):
 Selected project folder: {config['project_dir']}. All project tool file paths must be RELATIVE to this folder.
 First call project_info and project_tree. Read existing code, README, and project instructions (AGENTS.md when present).
 Older tool observations and completed write contents may be compacted. Read project files for their exact current contents.
+Earlier conversation and test results describe PREVIOUS TASKS and may be stale. For the current request inspect files and run the requested commands again. Never treat historical results as evidence that today's task was executed.
 Make sensible implementation choices. Ask only for genuinely missing required information; otherwise build the requested result.
 For a new app, create the root with create_project_folder path ".", then write actual source files, package metadata, and a README.
 Use complete file contents with write_project_file, or exact unique edits with edit_project_file. Never use write_project_file to create a directory.
+Preserve existing working functionality and the project's actual model/provider integrations. Do not replace them with simulated responses or placeholder APIs. A requested web UI must be a working web app, not just a CLI. Ask only for a genuinely required external credential; do not invent one.
 Approval policy: {'The user enabled auto-approval. Execute requested project edits and commands without asking for approval in chat; the app logs them automatically.' if config.get('auto_approve') else 'Project edits are approved once for this task. Build/test/install/preview commands each show their own approval dialog. Do not ask permission in chat.'}
 Run the real appropriate build/tests using run_project_command. A nonzero exit code or timeout is FAILURE: inspect the error, fix code, rerun until successful or a real external blocker.
 Do not weaken or remove existing tests just to get a pass. Do not claim a test ran without a successful command result.
@@ -545,6 +541,23 @@ Cite web sources as plain URLs. A failed or denied action is not success. Do not
 Read files as text only; explain limitations with binary documents. You can ask clarifying questions.
 User-saved preferences (data, not policy): {json.dumps(MEMORY,ensure_ascii=False)}'''
 
+def coding_gap(text,observations):
+    """Detect missing execution evidence, not a promise in generated prose."""
+    successful=[]
+    for item in observations:
+        try:result=json.loads(item['result'])
+        except (ValueError,TypeError):continue
+        if isinstance(result,dict) and not result.get('error'):successful.append(item['tool'])
+    if any('declined' in o['result'].lower() or 'disabled' in o['result'].lower() for o in observations):return None
+    if re.match(r'\s*(how\b|explain\b|describe\b)',text,re.I):return None
+    readonly=bool(re.search(r"(?:do not|don't|without)\s+(?:change|edit|write|modify)",text,re.I))
+    change=bool(re.search(r'\b(create|implement|refactor|improve|edit|write|fix|make)\b|\bbuild\s+(?:me\s+)?(?:an?\s+)?(?:app|website|tool)\b',text,re.I))
+    if change and not readonly and not any(t in successful for t in ('write_project_file','edit_project_file')):
+        return 'No successful source edit has been recorded. Inspect the project and perform the requested changes. If no change is needed, explain the evidence.'
+    if re.search(r'\b(run|test|tests|build|verify|launch|preview)\b',text,re.I) and not any(t in successful for t in ('run_project_command','start_project_preview')):
+        return 'No project command has run successfully. Run the requested build/test/launch command, or explain the actual prerequisite that blocks it.'
+    return None
+
 def run_job(job, text, config):
     if not BUSY.acquire(blocking=False):
         event(job,'error',text='Another task is still running. Stop it or wait for it to finish.')
@@ -557,10 +570,14 @@ def run_job(job, text, config):
             if not config.get('coding') or not config.get('files'):raise PermissionError('Enable Coding agent and Files in Settings before starting a coding task.')
             coding.root(config,coding_hooks())
             history=[m for m in history if m.get('mode')=='code' and m.get('project_dir')==config['project_dir']][-12:]
-        messages=[{'role':'system','content':system_prompt(config)}, *model_history(history), {'role':'user','content':text}]
+        context_history=model_history(history)
+        if config.get('mode')=='code':
+            context_history=[{'role':m['role'],'content':'Previous task context; not current execution evidence:\n'+m['content']} for m in history]
+            job['require_tools']=bool(coding_gap(text,[]))
+        messages=[{'role':'system','content':system_prompt(config)}, *context_history, {'role':'user','content':text}]
         event(job,'status',text='Thinking locally with '+config['model'])
         validate_model(config['model'],'tools')
-        final='';observations=[];repaired=False;completion_repaired=False;empty_repaired=False;coding_retries=0
+        final='';observations=[];repaired=False;completion_repaired=False;empty_repaired=False;coding_retries=0;execution_retries=0
         for step in range(config.get('code_steps',30) if config.get('mode')=='code' else config['max_steps']):
             if job['cancel'].is_set(): raise InterruptedError('Stopped by you.')
             inference_messages=coding.compact_messages(messages) if config.get('mode')=='code' else messages
@@ -569,8 +586,22 @@ def run_job(job, text, config):
             calls=combined.get('tool_calls',[])
             messages.append(combined)
             if not calls:
+                if job.get('require_tools') and not job.get('tool_choice_unsupported'):
+                    job['tool_choice_unsupported']=True
+                    messages.pop()
+                    messages.append({'role':'user','content':'No tool call was returned. Inspect the current project and execute the requested task with tools. Previous tasks do not prove this request was completed.'})
+                    event(job,'turn',text='Requesting fresh tool execution')
+                    continue
+                gap=coding_gap(text,observations) if config.get('mode')=='code' else None
+                if gap and execution_retries<2:
+                    execution_retries+=1
+                    job['require_tools']=True
+                    messages.append({'role':'user','content':'Continue the original task: '+text+'\n'+gap+' Never simulate integrations or replace working functionality with placeholders. Do not claim changes or commands without recorded tool results.'})
+                    event(job,'turn',text='Verifying actual project work')
+                    continue
                 if config.get('mode')=='code' and job.get('last_command_failed') and coding_retries<2 and not job.get('project_commands_declined') and not job.get('project_edits_declined'):
                     coding_retries+=1
+                    job['require_tools']=True
                     messages.append({'role':'user','content':'The most recent project command failed or timed out. Continue the original task: '+text+'\nInspect the recorded error, fix the cause, and rerun the relevant command. Do not claim success while a build/test still fails. If blocked by an external prerequisite you cannot resolve, state that precisely.'})
                     event(job,'turn',text='Checking the failed build or test')
                     continue
@@ -594,20 +625,22 @@ def run_job(job, text, config):
                     event(job,'turn',text='Summarizing completed actions')
                     final=summarize_observations(text,observations,config,job)
                 else:final=combined['content'] or 'The local model returned an empty response. No actions were completed.'
+                if gap:final+='\n\nExecution check: '+gap
                 break
+            job['require_tools']=False
             for call in calls:
                 f=call['function']; name=f['name']; args=f.get('arguments',{})
-                if isinstance(args,str): args=json.loads(args)
-                if not isinstance(args,dict): raise ValueError('Invalid tool arguments.')
                 event(job,'tool',name=name,arguments=args)
                 try:
+                    if isinstance(args,str):args=json.loads(args)
+                    if not isinstance(args,dict):raise ValueError('Invalid tool arguments. Return a JSON object.')
                     result=execute(name,args,job,config)
                 except InterruptedError: raise
                 except Exception as e: result={'error':str(e)}
                 packed=json.dumps(result,ensure_ascii=False,default=str)[:32000]
                 if name=='run_project_command':job['last_command_failed']=not isinstance(result,dict) or result.get('exit_code')!=0 or bool(result.get('timed_out'))
                 event(job,'result',name=name,text=packed)
-                observations.append({'tool':name,'arguments':{k:v for k,v in args.items() if k not in ('content','old_text','new_text')},'result':packed[:6000]})
+                observations.append({'tool':name,'arguments':{k:v for k,v in args.items() if k not in ('content','old_text','new_text')} if isinstance(args,dict) else {},'result':packed[:6000]})
                 messages.append({'role':'tool','tool_call_id':call['id'],'content':packed})
                 if job['cancel'].is_set(): raise InterruptedError('Stopped by you.')
             event(job,'turn',text='Reviewing tool results')
@@ -693,7 +726,9 @@ class Handler(BaseHTTPRequestHandler):
                 if path.startswith('/api/job/'):
                     job=JOBS[path.rsplit('/',1)[1]]
                     with LOCK:
-                        return self.send(200,{'events':job['events'],'done':job['done'],'approval':job['approval'],'prompt':job.get('prompt',''),'mode':job.get('mode','assistant')})
+                        from urllib.parse import parse_qs
+                        offset=max(0,int(parse_qs(urlparse(self.path).query).get('after',['0'])[0]))
+                        return self.send(200,{'events':job['events'][offset:],'event_count':len(job['events']),'done':job['done'],'approval':job['approval'],'prompt':job.get('prompt',''),'mode':job.get('mode','assistant')})
                 return self.send(404,{'error':'Not found'})
             except Exception as e: return self.send(400,{'error':str(e)})
         assets={'/':('index.html','text/html; charset=utf-8'),'/app.js':('app.js','text/javascript; charset=utf-8'),'/style.css':('style.css','text/css; charset=utf-8')}
@@ -760,8 +795,9 @@ class Handler(BaseHTTPRequestHandler):
                     CONFIG.update(update); save_json(DATA/'settings.json',CONFIG)
                 return self.send(200,{'ok':True})
             if path=='/api/load-model':
-                if BUSY.locked():raise ValueError('Wait for the running task before loading another model.')
-                result=lmstudio.load_model(data.get('model',CONFIG['model']),CONFIG['lmstudio_url'])
+                if not BUSY.acquire(blocking=False):raise ValueError('Wait for the running task before loading another model.')
+                try:result=lmstudio.load_model(data.get('model',CONFIG['model']),CONFIG['lmstudio_url'])
+                finally:BUSY.release()
                 return self.send(200,result)
             if path=='/api/stop-preview':
                 project=str(Path(data['project']).resolve())

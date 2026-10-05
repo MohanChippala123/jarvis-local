@@ -4,6 +4,9 @@ from unittest.mock import patch
 import lmstudio
 
 class ModelTests(unittest.TestCase):
+    def test_offline_server_has_actionable_message(self):
+        with patch.object(lmstudio.requests,'get',side_effect=lmstudio.requests.ConnectionError('connection refused')):
+            with self.assertRaisesRegex(RuntimeError,'Developer tab'):lmstudio.model_list()
     def test_remote_endpoints_rejected(self):
         for url in ['https://api.openai.com','http://example.com','http://127.0.0.1:1234/v1','http://user:pass@localhost:1234']:
             with self.assertRaises(ValueError):lmstudio.local_url(url)

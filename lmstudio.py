@@ -22,7 +22,10 @@ def headers():
     return value
 
 def model_list(url=DEFAULT_URL):
-    r=requests.get(local_url(url)+'/api/v1/models',headers=headers(),timeout=8)
+    endpoint=local_url(url)
+    try:r=requests.get(endpoint+'/api/v1/models',headers=headers(),timeout=8)
+    except (requests.ConnectionError,requests.Timeout):
+        raise RuntimeError('LM Studio is unavailable at '+endpoint+'. Open LM Studio and start its local server in the Developer tab.') from None
     r.raise_for_status()
     models=r.json().get('models',[])
     return [m for m in models if m.get('type')=='llm' and m.get('format') in {'gguf','mlx'}
@@ -42,7 +45,12 @@ def load_model(model,url=DEFAULT_URL):
     match=validate_model(model,'tools',url)
     if match.get('loaded_instances'):return {'status':'loaded','model':match['key']}
     r=requests.post(local_url(url)+'/api/v1/models/load',headers=headers(),json={'model':match['key'],'context_length':16384},timeout=(8,180))
-    r.raise_for_status();return r.json()
+    if not r.ok:
+        try:detail=r.json().get('error',r.text)
+        except ValueError:detail=r.text
+        if isinstance(detail,dict):detail=detail.get('message',detail)
+        raise RuntimeError('LM Studio could not load '+match['key']+': '+str(detail)[:1500]+'. Choose a model that fits your available RAM/VRAM.')
+    return r.json()
 
 def merge_delta(calls,fragment):
     idx=fragment.get('index',0)
@@ -67,7 +75,9 @@ async def _stream_chat(model,messages,tools,job,on_token,url,max_tokens):
     try:
         if job['cancel'].is_set():raise InterruptedError('Stopped.')
         payload={'model':model,'messages':messages,'stream':True,'temperature':.2,'max_tokens':max_tokens}
-        if tools:payload['tools']=tools
+        if tools:
+            payload['tools']=tools
+            if job.get('require_tools') and not job.get('tool_choice_unsupported'):payload['tool_choice']='required'
         content='';calls={};finish_reason=None;reasoning_chars=0
         async with httpx.AsyncClient(timeout=httpx.Timeout(180,connect=8),trust_env=False) as client:
             async with client.stream('POST',url+'/v1/chat/completions',json=payload,headers=headers()) as response:
@@ -95,7 +105,6 @@ async def _stream_chat(model,messages,tools,job,on_token,url,max_tokens):
             result['tool_calls']=[]
             for idx,call in sorted(calls.items()):
                 if not call['id']:call['id']='call_'+str(idx)
-                json.loads(call['function']['arguments'] or '{}')
                 call['function']['arguments']=call['function']['arguments'] or '{}'
                 result['tool_calls'].append(call)
         return result
