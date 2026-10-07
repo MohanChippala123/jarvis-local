@@ -2,11 +2,11 @@
 
 A local Windows AI assistant powered by **LM Studio**. Chat, research the web, inspect your screen, and perform approved desktop and file actions through a simple interface.
 
-**Early access · v0.7.0 · Windows x64 · MIT licensed**
+**Early access · v0.8.0 · Windows x64 · MIT licensed**
 
 ## Windows download
 
-Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.7.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
+Download the Windows ZIP from [GitHub Releases](https://github.com/MohanChippala123/jarvis-local/releases/tag/v0.8.0), extract it, and run **Jarvis.exe**. Python is bundled; models are separate. Jarvis opens an isolated Edge or Chrome app window, with an embedded fallback. This is an unsigned build, so review the source/release if Windows blocks it. You can run the source version instead.
 
 ## Prepare LM Studio
 
@@ -137,6 +137,14 @@ Click **+** beside the microphone to attach images, paste an image into the prom
 Choose the local vision model in **Settings > Images & screenshot understanding**. Jarvis reads each image locally with that model, then provides its observations to your chosen chat/coding/screen agent. A text-only chat model can therefore use image context. Image interpretation can miss fine details; crop or send a clearer image when necessary. Stop interrupts image inference too.
 
 Images are normalized to JPEG without original EXIF metadata and saved in the local Jarvis data folder. Chat history retains attachment previews and the vision observations for follow-up questions. Image retrieval requires the current app token; image data is not embedded in history JSON. New conversation clears the conversation; stored images remain in the local data folder.
+
+## Chat layout and screen agent improvements
+
+The app uses a centered chat layout, a collapsible sidebar, a compact composer and an optional **Activity** drawer. Click Activity to inspect exact tool actions and results. Coding and screen previews stay collapsible above the conversation. Code fences render as copyable blocks and named Markdown links are clickable. Images restore before the initial chat scroll so older image loads do not displace the latest reply.
+
+Screen control supports exact visible **control_text + control_type** selectors, resolved freshly immediately before input. Use **inspect_window(query=...)** to find matching labels deeper in large accessibility trees. **replace_text** focuses one editable field, selects its contents, pastes the replacement and returns the resulting controls/value in one agent call. Ambiguous labels, noneditable targets and invalid IDs are rejected. The agent executes at most one state-changing screen action from each model response; additional actions must use a new turn and current observation.
+
+These are agent instructions, tool and execution improvements. The downloaded LM Studio model weights are unchanged; this release does not claim fine-tuning or guaranteed control of every app.
 
 ## Screen control mode
 

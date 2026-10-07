@@ -67,5 +67,31 @@ class ScreenTests(unittest.TestCase):
         with patch.object(app,'approve',side_effect=PermissionError('Declined')),patch.object(screen,'target') as target:
             with self.assertRaises(PermissionError):app._execute('control_action',{'control_id':'a'},self.job,self.cfg)
         target.assert_not_called()
+    def test_named_target_rejects_ambiguous_controls(self):
+        view={'controls':[{'id':'a','text':'Search','type':'Edit'},{'id':'b','text':'Search','type':'Button'}]}
+        with patch.object(screen,'observe',return_value=view),patch.object(screen,'target',return_value='edit') as target:
+            self.assertEqual(screen.named_target('App','Search','Edit',self.job,Mock()),'edit')
+            target.assert_called_once_with(self.job,'a')
+            with self.assertRaisesRegex(ValueError,'ambiguous'):screen.named_target('App','Search','',self.job,Mock())
+    def test_replace_text_is_one_scoped_action_with_readback(self):
+        c=Mock();c.element_info.control_type='Edit';w=Mock(handle=9);w.window_text.return_value='Scratch'
+        rect=SimpleNamespace(left=10,right=30,top=20,bottom=40)
+        with patch.object(screen,'named_target',return_value=(c,9,rect)),patch.object(screen,'window',return_value=w),patch.object(app,'desktop_input') as inp,patch.object(screen,'observe',return_value={'controls':[{'value':'new text'}]}):
+            result=app._execute('control_action',{'window_title':'Scratch','control_text':'Input','control_type':'Edit','action':'replace_text','text':'new text'},self.job,self.cfg)
+        self.assertEqual([call.args[0]['action'] for call in inp.call_args_list],['hotkey','type'])
+        self.assertEqual(inp.call_args_list[0].args[0]['text'],'ctrl+a');self.assertEqual(result['next']['controls'][0]['value'],'new text')
+    def test_replace_text_rejects_noneditable_target(self):
+        c=Mock();c.element_info.control_type='Button'
+        with patch.object(screen,'target',return_value=(c,9,Mock())),patch.object(screen,'window',return_value=Mock(handle=9)),patch.object(app,'desktop_input') as inp:
+            with self.assertRaisesRegex(ValueError,'editable'):app._execute('control_action',{'window_title':'Scratch','control_id':'a','action':'replace_text'},self.job,self.cfg)
+        inp.assert_not_called()
+    def test_screen_batch_performs_only_one_mutation(self):
+        calls=[{'id':str(i),'type':'function','function':{'name':'control_action','arguments':'{"window_title":"Scratch","control_id":"a","action":"click"}'}} for i in range(2)]
+        responses=[{'role':'assistant','content':'','tool_calls':calls},{'role':'assistant','content':'One button clicked; the second action needs a fresh observation.'}]
+        with patch.object(app,'HISTORY',[]),patch.object(app,'validate_model'),patch.object(app.lmstudio,'stream_chat',side_effect=responses),patch.object(app,'execute',return_value={'completed':'click','next':{'controls':[]}}) as execute:
+            app.run_job(self.job,'Click the observed button.',self.cfg)
+        execute.assert_called_once()
+        results=[e['text'] for e in self.job['events'] if e['type']=='result']
+        self.assertIn('new turn',results[1]);self.assertTrue(self.job['done'])
 
 if __name__=='__main__':unittest.main()

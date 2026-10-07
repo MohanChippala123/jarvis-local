@@ -1,3 +1,16 @@
+# v0.8.0 screen agent and UI validation
+
+October 7, 2026. **85 automated tests passed**, plus JavaScript syntax validation.
+
+- Exact label/type targeting resolves a fresh control and rejects ambiguity. Query filtering searches deeper accessibility trees; returned controls include automation IDs.
+- replace_text is scoped to an editable control and executes select-all/paste with a fresh observation afterward. Noneditable targets cannot receive that operation.
+- The executor permits one attempted screen mutation per model response and rejects additional mutations until the next turn.
+- Actual packaged LM Studio Gemma 4 E4B test: replaced **old value** with **Jarvis agent passed**, clicked **Apply test** by its exact Button label, and verified the Result label. Four calls, zero tool errors, 25.4 seconds overall. This is a behavioral regression check, not a universal performance guarantee.
+- Chat UI: centered messages and composer, neutral colors, collapsible sidebar, optional activity drawer, copyable fenced code and named Markdown links. Desktop and 390px responsive checks recorded; earlier layout issues were corrected before final verification.
+- Existing settings, image history and auto-approval remain in effect. Model weights are unchanged.
+
+Historical validations follow.
+
 # v0.7.0 image-prompt validation
 
 October 5, 2026. **81 automated tests passed**, plus JavaScript syntax validation.

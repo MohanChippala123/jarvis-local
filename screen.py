@@ -40,13 +40,13 @@ def window(title):
     return Desktop(backend='uia').window(handle=matches[0]['handle']).wrapper_object()
 
 
-def observe(title,job,emit,capture=True):
+def observe(title,job,emit,capture=True,query=''):
     started=time.perf_counter()
     w=window(title)
     controls=[];targets={}
     observation=secrets.token_hex(4)
     # Bounding depth and returned text prevents a browser's complete DOM filling context.
-    for c in w.descendants(depth=6):
+    for c in w.descendants(depth=10):
         if len(controls)>=60:break
         try:
             if not c.is_visible():continue
@@ -56,10 +56,11 @@ def observe(title,job,emit,capture=True):
             if r.width()<=0 or r.height()<=0:continue
             kind=info.control_type
             text=c.window_text()[:180]
+            if query and query.casefold() not in text.casefold():continue
             if not text and kind not in ('Edit','Button','ComboBox','CheckBox','RadioButton','Slider','TabItem'):continue
             cid=observation+':'+str(len(controls)+1)
             runtime=tuple(info.runtime_id)
-            controls.append({'id':cid,'text':text,'type':kind,'enabled':c.is_enabled(),
+            controls.append({'id':cid,'text':text,'type':kind,'automation_id':info.automation_id,'enabled':c.is_enabled(),
                              'rectangle':[r.left,r.top,r.right,r.bottom]})
             if kind=='Edit':
                 try:controls[-1]['value']=c.iface_value.CurrentValue[:300]
@@ -72,7 +73,7 @@ def observe(title,job,emit,capture=True):
     job['screen_observed_at']=time.monotonic()
     rect=w.rectangle()
     result={'window_title':w.window_text(),'handle':w.handle,'rectangle':[rect.left,rect.top,rect.right,rect.bottom],
-            'controls':controls,'observation':observation,'elapsed_ms':round((time.perf_counter()-started)*1000),
+            'controls':controls,'query':query,'limit':60,'observation':observation,'elapsed_ms':round((time.perf_counter()-started)*1000),
             'note':'IDs expire after one control action or 45 seconds. Use fresh returned IDs. If a control is missing, inspect_screen for vision.'}
     if capture:
         import io,base64
@@ -93,7 +94,7 @@ def observe(title,job,emit,capture=True):
 def resolve(item):
     from pywinauto import Desktop
     w=Desktop(backend='uia').window(handle=item['handle']).wrapper_object()
-    for c in w.descendants(depth=6):
+    for c in w.descendants(depth=10):
         try:
             if tuple(c.element_info.runtime_id)==item['runtime']:return c
         except Exception:continue
@@ -114,3 +115,11 @@ def target(job,cid):
     except ValueError:raise
     except Exception as e:raise ValueError('Control no longer exists. Inspect again.') from e
     return c,item['handle'],r
+
+def named_target(title,text,kind,job,emit):
+    """Resolve a unique observed label freshly, avoiding brittle generated IDs."""
+    if not str(text).strip():raise ValueError('Supply control_id or an exact control_text label.')
+    view=observe(title,job,emit,capture=False,query=str(text))
+    matches=[c for c in view['controls'] if c['text'].casefold()==str(text).casefold() and (not kind or c['type'].casefold()==kind.casefold())]
+    if len(matches)!=1:raise ValueError('Control label is missing or ambiguous. Inspect with a query and choose a fresh ID and control type.')
+    return target(job,matches[0]['id'])
